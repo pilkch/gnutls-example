@@ -151,20 +151,24 @@ int main(void)
     gnutls_global_init();
 
     try {
-        // Allow connections to servers that have OpenPGP keys as well.
+        // Allow connections to servers that have OpenPGP keys as well
         gnutls::client_session session;
 
         // X509 stuff
         gnutls::certificate_credentials credentials;
 
-        // sets the trusted cas file
+        // Set the trusted cas file
         credentials.set_x509_trust_file(ca_certificates_file_path.c_str(), GNUTLS_X509_FMT_PEM);
 
-        // put the x509 credentials to the current session
+        // Put the x509 credentials to the current session
         session.set_credentials(credentials);
 
-        // Use default priorities
-        session.set_priority ("NORMAL:+SRP:+SRP-RSA:+SRP-DSS:-DHE-RSA", nullptr);
+        // Set TLS version and cypher priorities
+        // https://gnutls.org/manual/html_node/Priority-Strings.html
+        // NOTE: No SSL, only TLS1.2
+        // TODO: TLS1.3 didn't seem to work, server dependent?
+        //session.set_priority ("NORMAL:+SRP:+SRP-RSA:+SRP-DSS:-DHE-RSA:-VERS-SSL3.0:%SAFE_RENEGOTIATION:%LATEST_RECORD_VERSION", nullptr);
+        session.set_priority("SECURE128:+SECURE192:-VERS-ALL:+VERS-TLS1.2:%SAFE_RENEGOTIATION", nullptr);
 
         // connect to the peer
         const std::string ip = hostname_to_ip(server);
@@ -267,6 +271,8 @@ int main(void)
         }
 
         session.bye(GNUTLS_SHUT_RDWR);
+
+        std::cout<<"Finished"<<std::endl;
     } catch (gnutls::exception &ex) {
         std::cerr << "Exception caught: " << ex.what() << std::endl;
     }
