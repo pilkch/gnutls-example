@@ -19,6 +19,8 @@
 
 namespace {
 
+// Use the system ca-certificates file
+// Unfortunately this can differ in each distribution.  This worked on Ubuntu
 const std::string ca_certificates_file_path = "/etc/ssl/certs/ca-certificates.crt";
 
 const int port = 443;
