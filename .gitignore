@@ -1,0 +1,8 @@
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+.vscode
+
+gnutls-example
+output.html
