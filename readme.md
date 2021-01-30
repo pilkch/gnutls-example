@@ -22,12 +22,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ### What is this?
 
-Just a simple example of using gnutlsxx (A simple wrapper of gnutls) to connect to host via TLS to (Very naively) make a basic HTTP request.  
+Just a simple example of using gnutlsmm (A simple wrapper of gnutls) to connect to host via TLS to (Very naively) make a basic HTTP request.  
 It is really just an example of using TLS with gnutls.  OpenSSL has a bloated and horrible API and I was curious what it would look like with a simpler, more modern API.
 
-### gnutlsxx
+### gnutlsmm
 
-I used gnutlsxx which comes with gnutls.  It is a very thing layer over gnutls, basically just providing a nice RAII interface over the top of the C functions.  Many of the C++ functions have a 1 to 1 mapping with their underlying C API.
+I modified gnutlsxx which comes with gnutls.  It is a very thing layer over gnutls, basically just providing a nice RAII interface over the top of the C functions.  Many of the C++ functions have a 1 to 1 mapping with their underlying C API.  The library gnutlsmm is basically a cut down gnutlsxx that doesn't throw exceptions.
 
 ## Building
 
@@ -66,6 +66,11 @@ If you get an error about file not found then you may need to modify "ca_certifi
 
 This example was created by me from these bits of code, I basically just expanded upon the first one, adding *slightly* more rhobust HTTP parsing and TCP connection handling:
 
+#### gnutlsxx
+
+[https://github.com/gnutls/gnutls/blob/master/lib/includes/gnutls/gnutlsxx.h](https://github.com/gnutls/gnutls/blob/master/lib/includes/gnutls/gnutlsxx.h)
+[https://github.com/gnutls/gnutls/blob/master/lib/gnutlsxx.cpp](https://github.com/gnutls/gnutls/blob/master/lib/gnutlsxx.cpp)
+
 #### gnutls Client example using the C++ API
 
 This project is basically a complete working example based on this code:  
@@ -74,4 +79,3 @@ This project is basically a complete working example based on this code:
 #### TCP Helper Functions
 
 [https://gnutls.org/manual/html_node/Helper-functions-for-TCP-connections.html](https://gnutls.org/manual/html_node/Helper-functions-for-TCP-connections.html)
- 
