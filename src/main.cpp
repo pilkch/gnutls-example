@@ -15,7 +15,8 @@
 #include <sys/types.h>
 
 #include <gnutls/gnutls.h>
-#include <gnutls/gnutlsxx.h>
+
+#include <gnutlsmm.h>
 
 namespace {
 
@@ -28,6 +29,8 @@ const std::string server = "google.com";
 
 const size_t MAX_BUF = 4 * 1024; // 4k read buffer
 
+// Get the IP for a hostname
+// ie. "www.google.com" might return "172.217.25.132"
 std::string hostname_to_ip(const std::string& hostname)
 {
     const struct hostent* he = gethostbyname(hostname.c_str());
@@ -48,32 +51,54 @@ std::string hostname_to_ip(const std::string& hostname)
     return "";
 }
 
-// Connects to the peer and returns a socket descriptor
-int tcp_connect(const std::string& ip, int port)
+class tcp_connection {
+public:
+    tcp_connection();
+    ~tcp_connection();
+
+    bool connect(const std::string& ip, int port);
+    void close();
+
+    int get_sd() const { return sd; }
+
+private:
+    int sd;
+};
+
+tcp_connection::tcp_connection() :
+    sd(-1)
 {
-    // Connect to server
-    const int sd = socket(AF_INET, SOCK_STREAM, 0);
-
-    struct sockaddr_in sa;
-    memset(&sa, '\0', sizeof(sa));
-    sa.sin_family = AF_INET;
-    sa.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &sa.sin_addr);
-
-    const int result = connect(sd, (struct sockaddr *) &sa, sizeof(sa));
-    if (result < 0) {
-        fprintf(stderr, "Connect error\n");
-        exit(1);
-    }
-
-    return sd;
 }
 
-// Closes the given socket descriptor
-void tcp_close(int sd)
+tcp_connection::~tcp_connection()
 {
-    shutdown(sd, SHUT_RDWR); // No more receptions or transmissions
-    close(sd);
+    close();
+}
+
+bool tcp_connection::connect(const std::string& ip, int port)
+{
+    close();
+
+    // Connect to server
+    sd = ::socket(AF_INET, SOCK_STREAM, 0);
+
+    struct sockaddr_in sa;
+    ::memset(&sa, '\0', sizeof(sa));
+    sa.sin_family = AF_INET;
+    sa.sin_port = ::htons(port);
+    ::inet_pton(AF_INET, ip.c_str(), &sa.sin_addr);
+
+    const int result = ::connect(sd, (struct sockaddr *) &sa, sizeof(sa));
+    return (result >= 0);
+}
+
+void tcp_connection::close()
+{
+    if (sd != -1) {
+        ::shutdown(sd, SHUT_RDWR); // No more receptions or transmissions
+        ::close(sd);
+        sd = -1;
+    }
 }
 
 
@@ -149,17 +174,23 @@ bool sleep_ms(int timeout_ms)
 
 int main(void)
 {
-    int sd = -1;
+    const std::string ip = hostname_to_ip(server);
+
     gnutls_global_init();
 
-    try {
-        // Allow connections to servers that have OpenPGP keys as well
-        gnutls::client_session session;
+    {
+        tcp_connection connection;
+
+        gnutlsmm::client_session session;
+
+        session.init();
 
         // X509 stuff
-        gnutls::certificate_credentials credentials;
+        gnutlsmm::certificate_credentials credentials;
 
-        // Set the trusted cas file
+        credentials.init();
+
+        // Set the trusted ca file
         credentials.set_x509_trust_file(ca_certificates_file_path.c_str(), GNUTLS_X509_FMT_PEM);
 
         // Put the x509 credentials to the current session
@@ -173,9 +204,8 @@ int main(void)
         session.set_priority("SECURE128:+SECURE192:-VERS-ALL:+VERS-TLS1.2:%SAFE_RENEGOTIATION", nullptr);
 
         // connect to the peer
-        const std::string ip = hostname_to_ip(server);
-        sd = tcp_connect(ip, port);
-        session.set_transport_ptr((gnutls_transport_ptr_t)(ptrdiff_t)sd);
+        connection.connect(ip, port);
+        session.set_transport_ptr((gnutls_transport_ptr_t)(ptrdiff_t)connection.get_sd());
 
         // Perform the TLS handshake
         const int result = session.handshake();
@@ -194,7 +224,7 @@ int main(void)
 
         char buffer[MAX_BUF + 1];
 
-        poll_read p(sd);
+        poll_read p(connection.get_sd());
 
         const int timeout_ms = 2000;
 
@@ -219,7 +249,7 @@ int main(void)
                 switch (p.poll(timeout_ms)) {
                     case POLL_READ_RESULT::DATA_READY: {
                         // Check if bytes are actually available (Otherwise if we try to read again the gnutls session object goes into a bad state and gnutlsxx throws an exception)
-                        if (get_bytes_available(sd) == 0) {
+                        if (get_bytes_available(connection.get_sd()) == 0) {
                             //std::cout<<"but no bytes available"<<std::endl;
                             no_bytes_retries++;
                             // Don't hog the CPU
@@ -275,13 +305,6 @@ int main(void)
         session.bye(GNUTLS_SHUT_RDWR);
 
         std::cout<<"Finished"<<std::endl;
-    } catch (gnutls::exception &ex) {
-        std::cerr << "Exception caught: " << ex.what() << std::endl;
-    }
-
-
-    if (sd != -1) {
-        tcp_close(sd);
     }
 
     gnutls_global_deinit();
