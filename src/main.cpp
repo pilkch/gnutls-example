@@ -21,16 +21,16 @@
 namespace {
 
 // Use the system ca-certificates file
-// Unfortunately this can differ in each distribution.  This worked on Ubuntu
+// Unfortunately this can differ in each distribution.  This worked on Ubuntu and Fedora.
 const std::string ca_certificates_file_path = "/etc/ssl/certs/ca-certificates.crt";
 
 const int port = 443;
-const std::string server = "google.com";
+const std::string server = "redhat.com";
 
 const size_t MAX_BUF = 4 * 1024; // 4k read buffer
 
 // Get the IP for a hostname
-// ie. "www.google.com" might return "172.217.25.132"
+// ie. "www.redhat.com" might return "23.40.167.21"
 std::string hostname_to_ip(const std::string& hostname)
 {
     const struct hostent* he = gethostbyname(hostname.c_str());
