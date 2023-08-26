@@ -39,11 +39,13 @@ OR
 
 ### Building on Linux
 
-NOTE: I've only tried it on Ubuntu.  The libgnutls development package name may be different on your distribution.
-
 Install prerequisites:
 ```bash
-sudo apt-get install cmake libgnutls28-dev
+sudo apt-get install gcc-g++ cmake libgnutls28-dev
+```
+OR
+```bash
+sudo yum install gcc-g++ cmake gnutls-devel
 ```
 
 Build:
